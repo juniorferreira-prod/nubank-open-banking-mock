@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nubank Open Finance Consent Flow</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  background: #000;
+  border-radius: 55px;
+  padding: 12px;
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.5), inset 0 0 2px rgba(255,255,255,0.1);
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+}
+
+.notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 34px;
+  background: #000;
+  border-radius: 0 0 20px 20px;
+  z-index: 1000;
+}
+
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px 0;
+  z-index: 999;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-bar .time { color: #fff; }
+.status-bar .icons { color: #fff; display: flex; gap: 6px; font-size: 12px; }
+.status-bar.dark .time, .status-bar.dark .icons { color: #000; }
+
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: translateX(20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+
+.screen.slide-left {
+  transform: translateX(-20px);
+}
+
+/* Progress indicator */
+.progress-bar {
+  position: absolute;
+  top: 54px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #eee;
+  z-index: 998;
+}
+
+.progress-bar .fill {
+  height: 100%;
+  background: #820AD1;
+  transition: width 0.4s ease;
+}
+
+/* Common elements */
+.screen-content {
+  padding: 70px 20px 40px;
+  min-height: 100%;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.back-btn, .close-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s;
+  font-size: 20px;
+}
+
+.back-btn:hover, .close-btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  text-align: center;
+}
+
+.btn:hover { opacity: 0.9; }
+.btn:active { transform: scale(0.98); }
+
+.btn-purple {
+  background: #820AD1;
+  color: #fff;
+  border-radius: 30px;
+}
+
+.btn-orange {
+  background: #EC7000;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.btn-gray {
+  background: #f0f0f0;
+  color: #333;
+  border-radius: 30px;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #1a73e8;
+  color: #1a73e8;
+}
+
+.tappable {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+
+.tappable:hover {
+  background: rgba(130, 10, 209, 0.04);
+}
+
+.card {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.purple-link {
+  color: #820AD1;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.purple-link:hover {
+  text-decoration: underline;
+}
+
+.chevron::after {
+  content: "\203A";
+  font-size: 20px;
+  color: #999;
+  margin-left: auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-green {
+  background: #e6f9e6;
+  color: #0a8a0a;
+}
+
+.badge-new {
+  background: #820AD1;
+  color: #fff;
+}
+
+/* Itau theme */
+.itau-screen .screen-content {
+  background: #f5f5f5;
+}
+
+.itau-header {
+  background: #EC7000;
+  padding: 70px 20px 16px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.itau-header .logo {
+  font-weight: 700;
+  font-size: 22px;
+  font-style: italic;
+  letter-spacing: -0.5px;
+}
+
+.itau-body {
+  padding: 20px;
+}
+
+/* Modal/overlay */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 1001;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-sheet {
+  background: #fff;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px 40px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 80%;
+  overflow-y: auto;
+}
+
+.modal-overlay.active .modal-sheet {
+  transform: translateY(0);
+}
+
+/* Checkbox */
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #EC7000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Radio */
+.radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.radio.selected {
+  border-color: #820AD1;
+}
+
+.radio.selected::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #820AD1;
+}
+
+/* Dots pagination */
+.dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+}
+
+.dot.active {
+  background: #820AD1;
+}
+
+/* List item */
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 12px;
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+
+.list-item:hover {
+  background: #f8f5fc;
+}
+
+.list-item .icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.list-item .text {
+  flex: 1;
+}
+
+.list-item .chevron-right {
+  color: #999;
+  font-size: 18px;
+}
+
+/* Nubank purple header screens */
+.nu-header {
+  background: #820AD1;
+  padding: 70px 20px 20px;
+  color: #fff;
+}
+
+/* Scrollbar hide */
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+.transfer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.bank-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.nu-icon {
+  background: #820AD1;
+  color: #fff;
+}
+
+.itau-icon {
+  background: #EC7000;
+  color: #fff;
+}
+
+.arrows {
+  color: #999;
+  font-size: 18px;
+}
+
+/* Info box */
+.info-box {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #555;
+  margin: 12px 0;
+  line-height: 1.4;
+}
+
+.tab-bar {
+  display: flex;
+  border-bottom: 2px solid #eee;
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab.active {
+  color: #820AD1;
+  border-bottom-color: #820AD1;
+}
+</style>
+</head>
+<body>
+<div class="phone-frame">
+<div class="phone-screen" id="app">
+<div class="notch"></div>
+<div class="status-bar" id="statusBar">
+  <span class="time">9:41</span>
+  <span class="icons">
+    <span>&#9679;&#9679;&#9679;&#9679;</span>
+    <span>WiFi</span>
+    <span>&#128267;</span>
+  </span>
+</div>
+<div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+<div id="fixedBack" style="position:absolute; bottom:20px; right:20px; z-index:1000; display:none;">
+  <span onclick="goTo(currentScreen - 1)" style="color:#820AD1; font-weight:600; font-size:13px; cursor:pointer; padding:8px 12px; background:rgba(255,255,255,0.9); border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">&larr; Back</span>
+</div>
+
+<!-- SCREEN 1 (merged old 1+2) -->
+<div class="screen active" id="screen1" data-progress="0">
+  <div class="screen-content" style="background:#fff; color:#1a1a1a; padding-top:70px;">
+    <p style="font-size:14px; color:#820AD1; font-weight:700; margin-bottom:2px;">Nubank</p>
+    <h2 style="font-size:22px; font-weight:700; margin-bottom:4px;">Loans</h2>
+    <p style="font-size:14px; color:#666; margin-bottom:4px;">To help you achieve your goals.</p>
+    <p style="font-size:13px; color:#999; margin-bottom:16px;">We have 3 options for you</p>
+
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <p style="font-weight:600; font-size:15px;">Personal Loan</p>
+        <p style="font-size:13px; color:#666;">Simulate up to <strong>R$ 30,000.00</strong></p>
+        <p style="font-size:12px; color:#999;">Rates: Depends on analysis</p>
+      </div>
+      <div style="background:#820AD1; color:#fff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:20px; cursor:pointer;">Simulate</div>
+    </div>
+
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <p style="font-weight:600; font-size:15px;">Consignado</p>
+        <p style="font-size:13px; color:#666;">Installments up to Available margin</p>
+        <p style="font-size:12px; color:#999;">Rates from 2.20%/month</p>
+      </div>
+      <div style="background:#820AD1; color:#fff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:20px; cursor:pointer;">Simulate</div>
+    </div>
+
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:16px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; position:relative;">
+      <span class="badge badge-new" style="position:absolute; top:12px; right:12px;">New</span>
+      <div>
+        <p style="font-weight:600; font-size:15px;">Consignado CLT</p>
+        <p style="font-size:13px; color:#666;">Available margin</p>
+        <p style="font-size:12px; color:#999;">Rates from 2.95%/month</p>
+      </div>
+    </div>
+
+    <p style="font-size:15px; color:#1a1a1a; margin:24px 0 12px; font-weight:700;">Increase your chances of getting more offers</p>
+
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:16px; margin-bottom:12px;">
+      <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Bring your data via Open Finance</p>
+      <p style="font-size:13px; color:#555; margin-bottom:12px;">Sharing your data from other banks with Nubank can improve your credit analysis for loans.</p>
+      <div class="tappable" onclick="goTo(2)" style="color:#820AD1; font-weight:600; font-size:14px; padding:8px 0;">Bring data &rarr;</div>
+    </div>
+
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:16px; margin-bottom:12px;">
+      <p style="font-weight:700; font-size:15px; margin-bottom:6px;">Receive your salary at...</p>
+      <p style="font-size:13px; color:#555; margin-bottom:12px;">Concentrate your finances by transferring your salary to Nubank.</p>
+      <div style="color:#820AD1; font-weight:600; font-size:14px; padding:8px 0;">Bring salary &rarr;</div>
+    </div>
+
+    <p style="font-size:16px; font-weight:700; margin:20px 0 12px; color:#1a1a1a;">Our loans</p>
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:14px; margin-bottom:8px;">
+      <p style="font-weight:600; font-size:14px; color:#333;">Personal Loan</p>
+    </div>
+    <div style="background:#fff; border:1px solid #e8e8e8; border-radius:12px; padding:14px;">
+      <p style="font-weight:600; font-size:14px; color:#333;">Consignado</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2 (old 3) -->
+<div class="screen" id="screen2" data-progress="5">
+  <div class="screen-content" style="text-align:center;">
+    <div class="header-nav">
+      <span></span>
+      <span style="font-weight:600; color:#820AD1;">Open Finance</span>
+      <span class="close-btn" onclick="goTo(1)">&times;</span>
+    </div>
+    <div style="width:120px; height:120px; background:linear-gradient(135deg,#820AD1,#a855f7); border-radius:50%; margin:40px auto; display:flex; align-items:center; justify-content:center;">
+      <span style="font-size:40px; color:#fff;">$</span>
+    </div>
+    <h2 style="font-size:22px; margin-bottom:8px;">Increase your chances of getting credit</h2>
+    <p style="color:#666; font-size:14px; margin-bottom:30px;">More chances to unlock credit limits or better loan conditions.</p>
+    <div class="dots">
+      <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div style="margin-top:30px;">
+      <div onclick="goTo(3)" style="width:56px; height:56px; background:#820AD1; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="color:#fff; font-size:24px;">&rarr;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3 (old 4) -->
+<div class="screen" id="screen3" data-progress="10">
+  <div class="screen-content" style="text-align:center;">
+    <div class="header-nav">
+      <span></span>
+      <span style="font-weight:600; color:#820AD1;">Open Finance</span>
+      <span class="close-btn" onclick="goTo(1)">&times;</span>
+    </div>
+    <div style="width:120px; height:120px; background:linear-gradient(135deg,#820AD1,#a855f7); border-radius:50%; margin:40px auto; display:flex; align-items:center; justify-content:center; position:relative;">
+      <span style="font-size:18px; color:#fff; font-weight:700;">Nu</span>
+    </div>
+    <h2 style="font-size:22px; margin-bottom:8px;">Bring money in seconds</h2>
+    <p style="color:#666; font-size:14px; margin-bottom:30px;">No need to open multiple apps to move your money.</p>
+    <div class="dots">
+      <div class="dot"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div style="margin-top:30px;">
+      <div onclick="goTo(4)" style="width:56px; height:56px; background:#820AD1; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="color:#fff; font-size:24px;">&rarr;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4 (old 5) -->
+<div class="screen" id="screen4" data-progress="15">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(3)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:22px; margin-bottom:8px;">Select your institution</h2>
+    <p style="color:#555; font-size:14px; margin-bottom:12px;">Jose, choose an institution where you are a customer to bring your data.</p>
+    <p class="purple-link" style="margin-bottom:16px;">Learn about the benefits &gt;</p>
+
+    <div style="background:#f5f5f5; border-radius:10px; padding:12px 16px; margin-bottom:20px; color:#999; font-size:14px;">
+      Search institution
+    </div>
+
+    <p style="font-size:12px; color:#999; font-weight:600; text-transform:uppercase; margin-bottom:8px;">Suggestions</p>
+
+    <div class="list-item tappable">
+      <div class="icon-circle" style="background:#00b4d8; color:#fff;">MP</div>
+      <div class="text">Mercado Pago</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <div class="icon-circle" style="background:#21c25e; color:#fff;">PP</div>
+      <div class="text">PicPay</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <div class="icon-circle" style="background:#005ca9; color:#fff;">CX</div>
+      <div class="text">CAIXA</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <div class="icon-circle" style="background:#ec0000; color:#fff;">S</div>
+      <div class="text">Santander</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable" onclick="goTo(5)">
+      <div class="icon-circle" style="background:#EC7000; color:#fff;">It</div>
+      <div class="text">Itau</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 5 (old 6) -->
+<div class="screen" id="screen5" data-progress="20">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(4)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:8px;">Review the data you will bring to Nubank</h2>
+    <p style="color:#555; font-size:14px; margin-bottom:20px;">To complete this step, we will redirect you to Itau.</p>
+
+    <p class="section-title">Selected institution</p>
+    <div class="list-item tappable" style="border:1px solid #eee; border-radius:10px; margin-bottom:16px;">
+      <div class="icon-circle" style="background:#EC7000; color:#fff;">It</div>
+      <div class="text" style="font-weight:600;">Itau</div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <p class="section-title">Holder</p>
+    <div style="padding:12px 0; margin-bottom:16px;">
+      <p style="font-weight:600;">Jose Ferreira Junior</p>
+      <p style="font-size:13px; color:#666;">CPF: ***.831.216-**</p>
+    </div>
+
+    <p class="section-title">Connection purpose</p>
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 0; margin-bottom:30px;">
+      <span style="font-size:20px;">&#128269;</span>
+      <span style="font-size:14px;">Search for credit offers</span>
+    </div>
+
+    <button class="btn btn-purple" onclick="goTo(6)" style="margin-top:20px;">Confirm</button>
+  </div>
+</div>
+
+<!-- SCREEN 6 (merged old 7+8+9) -->
+<div class="screen itau-screen" id="screen6" data-progress="30">
+  <div class="itau-header">
+    <span class="logo">itau</span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:13px;">hello, Jose Junior</span>
+      <div style="width:32px; height:32px; background:rgba(255,255,255,0.3); border-radius:50%;"></div>
+    </div>
+  </div>
+  <div class="itau-body">
+    <h2 style="font-size:20px; margin-bottom:12px;">sharing confirmation</h2>
+    <div class="info-box">
+      <p style="font-size:12px;"><strong>Institution:</strong> NU PAGAMENTOS S.A. - PAYMENT INSTITUTION</p>
+      <p style="font-size:12px;">CNPJ: 18.236.120/0001-58</p>
+    </div>
+    <p style="font-size:13px; color:#555; margin:12px 0;">Before sharing your data with the institution we need to confirm some information.</p>
+
+    <div style="font-size:13px; color:#333; line-height:2;">
+      <p><strong>Name:</strong> Jose Ferreira Junior</p>
+      <p><strong>cpf/cnpj:</strong> 053.831.216-50</p>
+      <p><strong>Request date:</strong> 11/06/2026 at 19:10:06</p>
+      <p><strong>Sharing period:</strong> no time limit</p>
+      <p style="font-size:11px; color:#888; word-break:break-all;"><strong>Request number:</strong> 97280452-ba0b-4cfc-a3bc-5b849c991ed1</p>
+    </div>
+
+    <p style="font-weight:600; margin:20px 0 10px; font-size:14px;">select the data to be shared</p>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px; background:#fff; border-radius:8px; border:1px solid #eee; margin-bottom:12px;">
+      <div class="checkbox">&#10003;</div>
+      <span style="font-size:14px; flex:1;">registration data</span>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <p style="font-weight:600; font-size:14px; margin-bottom:8px;">account data <span class="badge" style="background:#EC7000; color:#fff; font-size:10px;">mandatory</span></p>
+    <div style="padding-left:12px; font-size:13px; line-height:2.2;">
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> checking account - branch 9642, account 4372-4</p>
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> savings account - MULTIDATA 500</p>
+    </div>
+
+    <p style="font-weight:600; font-size:14px; margin:16px 0 8px;">credit card data <span class="badge" style="background:#EC7000; color:#fff; font-size:10px;">mandatory</span></p>
+    <div style="padding-left:12px; font-size:13px; line-height:2.2;">
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> personnalite multiplo mastercard platinum - ending 1644</p>
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> personnalite mc black pontos - ending 1600</p>
+    </div>
+
+    <p style="font-weight:600; font-size:14px; margin:16px 0 8px;">credit operations data</p>
+    <div style="padding-left:12px; font-size:13px; line-height:2.2;">
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> financing, loans and other credit types <span style="color:#999;">&rsaquo;</span></p>
+    </div>
+
+    <p style="font-weight:600; font-size:14px; margin:16px 0 8px;">investment data</p>
+    <div style="padding-left:12px; font-size:13px; line-height:2.2;">
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> all current investments <span style="color:#999;">&rsaquo;</span></p>
+    </div>
+
+    <p style="font-weight:600; font-size:14px; margin:16px 0 8px;">exchange data</p>
+    <div style="padding-left:12px; font-size:13px; margin-bottom:16px;">
+      <p><span class="checkbox" style="display:inline-flex; width:16px; height:16px; font-size:10px; margin-right:8px;">&#10003;</span> exchange operations</p>
+    </div>
+
+    <div class="info-box">
+      <p style="margin-bottom:8px;">&#8226; During the sharing period, new contracted products will be shared.</p>
+      <p style="margin-bottom:8px;">&#8226; After your confirmation, we will redirect you to NU PAGAMENTOS S.A.</p>
+    </div>
+
+    <p style="font-size:12px; color:#888; margin:12px 0;">If you have enabled hide financial apps mode, disable it before proceeding.</p>
+
+    <button class="btn btn-orange" onclick="goTo(7)" style="margin-bottom:10px;">I want to share</button>
+    <button class="btn" style="background:transparent; border:2px solid #003366; color:#003366; font-weight:600; border-radius:8px;">Cancel sharing</button>
+  </div>
+</div>
+
+<!-- SCREEN 7 (old 10) -->
+<div class="screen" id="screen7" data-progress="40">
+  <div style="height:100%; display:flex; flex-direction:column; cursor:pointer;" onclick="goTo(8)">
+    <div style="flex:1; background:#EC7000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center; padding-top:70px;">
+      <div style="font-size:28px; font-weight:700; color:#fff; font-style:italic; margin-bottom:30px;">itau</div>
+      <div style="width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center;">
+        <span style="color:#fff; font-size:24px;">&#8645;</span>
+      </div>
+    </div>
+    <div style="flex:1; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; text-align:center;">
+      <div style="width:44px; height:44px; border-radius:50%; background:#820AD1; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+        <span style="color:#fff; font-weight:700; font-size:14px;">Nu</span>
+      </div>
+      <p style="font-size:18px; font-weight:700; margin-bottom:8px;">Data shared!</p>
+      <p style="font-size:14px; color:#666; margin-bottom:20px;">From here you will be securely redirected to the other institution.</p>
+      <p style="font-size:12px; color:#999;">open finance</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 8 (old 11) -->
+<div class="screen" id="screen8" data-progress="45">
+  <div class="screen-content" style="text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100%;">
+    <div style="position:absolute; top:70px; right:20px;" class="close-btn" onclick="goTo(1)">&times;</div>
+    <div style="width:80px; height:80px; position:relative; margin-bottom:24px;">
+      <div style="position:absolute; inset:0; border:4px solid #22c55e; border-radius:50%; border-right-color:transparent; transform:rotate(45deg);"></div>
+      <div style="position:absolute; inset:8px; background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+        <span style="color:#fff; font-size:32px;">&#10003;</span>
+      </div>
+    </div>
+    <h2 style="color:#820AD1; font-size:20px; margin-bottom:8px;">Your Itau data is here!</h2>
+    <p style="font-size:14px; color:#555; margin-bottom:4px;">Now just connect to bring money</p>
+    <p style="font-size:13px; color:#666; margin-bottom:24px; padding:0 20px;">Just connect once to bring money to Nu whenever you want without leaving the app.</p>
+    <p class="purple-link tappable" onclick="goTo(9)" style="margin-bottom:30px; padding:8px;">Sharing summary</p>
+    <button class="btn btn-purple" onclick="goTo(11)" style="width:90%; margin-bottom:10px; border-radius:30px;">Connect to bring money</button>
+    <button class="btn btn-gray" onclick="goTo(1)" style="width:90%; border-radius:30px;">Close</button>
+  </div>
+</div>
+
+<!-- SCREEN 9 (old 12) -->
+<div class="screen" id="screen9" data-progress="45">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(8)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:20px;">Sharing summary</h2>
+
+    <p class="section-title">Receiving data</p>
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #eee; margin-bottom:16px;">
+      <div class="icon-circle" style="background:#EC7000; color:#fff; width:36px; height:36px; font-size:12px;">It</div>
+      <span style="font-weight:600; flex:1;">Itau</span>
+      <span class="badge badge-green">Active</span>
+    </div>
+
+    <p class="section-title">Holder</p>
+    <p style="font-weight:600; margin-bottom:4px;">Jose Ferreira Junior</p>
+    <p style="font-size:13px; color:#666; margin-bottom:16px;">CPF: ***.831.216-**</p>
+
+    <p class="section-title">Connection purpose</p>
+    <ul style="font-size:14px; color:#333; padding-left:16px; line-height:2;">
+      <li>Search for credit offers</li>
+      <li>Centralize balances and transactions</li>
+      <li>Personalized offers and alerts</li>
+    </ul>
+
+    <p class="tappable purple-link" onclick="goTo(10)" style="margin-top:20px; padding:8px 0;">What data we need for this &rsaquo;</p>
+  </div>
+</div>
+
+<!-- SCREEN 10 (merged old 13+14) -->
+<div class="screen" id="screen10" data-progress="45">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(9)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:18px; margin-bottom:16px;">What data we need for this</h2>
+
+    <div class="list-item tappable">
+      <span style="flex:1;">Registration</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <span style="flex:1;">Account</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <span style="flex:1;">Credit cards</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <span style="flex:1;">Credit</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <span style="flex:1;">Investments</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+    <div class="list-item tappable">
+      <span style="flex:1;">Exchange</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div style="margin-top:20px; padding:12px 0; border-top:1px solid #eee;">
+      <p class="section-title">Connection time</p>
+      <p style="font-weight:600;">Indefinite term</p>
+      <p style="font-size:13px; color:#666;">No expiration date</p>
+    </div>
+
+    <div style="margin-top:16px; padding:12px 0; border-top:1px solid #eee;">
+      <p class="section-title">Terms and conditions</p>
+      <div class="list-item tappable">
+        <span style="flex:1; color:#820AD1; font-weight:600;">Review terms and conditions</span>
+        <span class="chevron-right">&rsaquo;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 11 (old 15) -->
+<div class="screen" id="screen11" data-progress="50">
+  <div style="height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:flex-end;">
+    <div style="background:#fff; width:100%; border-radius:20px 20px 0 0; padding:24px 20px 40px;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin:16px 0 20px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:#820AD1; display:flex; align-items:center; justify-content:center;">
+          <span style="color:#fff; font-weight:700; font-size:14px;">Nu</span>
+        </div>
+        <span style="color:#999; font-size:20px;">&#8644;</span>
+        <div style="width:48px; height:48px; border-radius:8px; background:#003366; display:flex; align-items:center; justify-content:center;">
+          <span style="color:#fff; font-weight:700; font-size:11px; font-style:italic;">itau</span>
+        </div>
+      </div>
+
+      <h2 style="font-size:20px; text-align:center; margin-bottom:8px;">Connect accounts</h2>
+      <p style="font-size:14px; color:#666; text-align:center; margin-bottom:16px;">After connecting, you'll be able to bring money here without leaving the app.</p>
+
+      <div style="background:#f5f5f5; border-radius:10px; padding:14px; margin-bottom:12px;">
+        <p style="font-weight:600;">Jose Ferreira Junior</p>
+        <p style="font-size:13px; color:#666;">***.831.216-**</p>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <div style="flex:1; background:#f5f5f5; border-radius:10px; padding:12px;">
+          <p style="font-size:12px; color:#999;">Bank</p>
+          <p style="font-weight:600; font-size:14px;">Itau</p>
+        </div>
+        <div style="flex:1; background:#f5f5f5; border-radius:10px; padding:12px;">
+          <p style="font-size:12px; color:#999;">Type</p>
+          <p style="font-weight:600; font-size:14px;">Pix <span style="color:#999;">&rsaquo;</span></p>
+        </div>
+      </div>
+
+      <button class="btn btn-purple" onclick="goTo(14)" style="margin-bottom:10px;">Approve</button>
+      <p style="font-size:12px; color:#888; text-align:center; margin-bottom:12px;">We will redirect you to the other bank's app.</p>
+      <p class="purple-link tappable" onclick="goTo(12)" style="text-align:center; padding:8px;">Optional settings &gt;</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 12 (old 16 with modal) -->
+<div class="screen" id="screen12" data-progress="50">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(11)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:24px;">Optional settings</h2>
+
+    <div class="list-item tappable" onclick="showModal()">
+      <span style="font-size:20px;">&#128197;</span>
+      <div class="text">
+        <p style="font-weight:600;">Connection deadline</p>
+        <p style="font-size:13px; color:#666;">Indefinite</p>
+      </div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div class="list-item tappable" onclick="goTo(13)">
+      <span style="font-size:20px;">&#128178;</span>
+      <div class="text">
+        <p style="font-weight:600;">Transfer limit</p>
+        <p style="font-size:13px; color:#666;">Indefinite</p>
+      </div>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+        <span class="close-btn" onclick="hideModal()">&times;</span>
+      </div>
+      <h3 style="font-size:18px; margin-bottom:20px;">Connection deadline between accounts</h3>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:8px; border-radius:8px;" class="tappable">
+          <div class="radio selected"></div>
+          <span style="flex:1;">Indefinite</span>
+          <span class="badge" style="background:#f3e8ff; color:#820AD1;">Recommended</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:8px; border-radius:8px;" class="tappable">
+          <div class="radio"></div>
+          <span>12 months</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:8px; border-radius:8px;" class="tappable">
+          <div class="radio"></div>
+          <span>6 months</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; padding:8px; border-radius:8px;" class="tappable">
+          <div class="radio"></div>
+          <span>3 months</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 13 (old 18) -->
+<div class="screen" id="screen13" data-progress="50">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(12)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:8px;">Limits</h2>
+    <p style="color:#555; font-size:14px; margin-bottom:16px;">Set maximum values for transferring money from Itau</p>
+
+    <div class="info-box">
+      <p>Transfer depends on available balance in your account at the time of the transaction.</p>
+    </div>
+
+    <p class="section-title" style="margin-top:20px;">General limits (optional)</p>
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+      <span style="font-size:14px; color:#555;">Per transaction</span>
+      <span style="font-weight:600;">Unlimited</span>
+    </div>
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+      <span style="font-size:14px; color:#555;">Total Value</span>
+      <span style="font-weight:600;">Unlimited</span>
+    </div>
+
+    <p class="section-title" style="margin-top:20px;">Limits by period (optional)</p>
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+      <span style="font-size:14px; color:#555;">Period</span>
+      <span style="font-weight:600;">No period</span>
+    </div>
+
+    <p class="purple-link" style="margin-top:16px;">+ Add another limit</p>
+  </div>
+</div>
+
+<!-- SCREEN 14 (merged old 19+20) -->
+<div class="screen" id="screen14" data-progress="55">
+  <div class="screen-content" style="padding-top:70px; background:#fff;">
+    <div class="header-nav">
+      <span class="close-btn" onclick="goTo(11)">&times;</span>
+      <span style="font-size:13px; color:#666;">Step 1 of 2</span>
+      <span></span>
+    </div>
+    <p style="font-size:13px; color:#EC7000; font-weight:700; margin-bottom:4px;">Smart Transfers</p>
+    <h2 style="font-size:18px; margin-bottom:16px;">Authorize Nubank to move your Itau balance?</h2>
+
+    <div style="font-size:13px; line-height:2; margin-bottom:16px;">
+      <p><strong>Balance source:</strong> Checking Account</p>
+      <p><strong>Authorization deadline:</strong> Sep 09, 26</p>
+      <p style="word-break:break-all;"><strong>Authorization ID:</strong> 36173da8-19be-46c4-9bf3-379853eb45d7</p>
+    </div>
+
+    <div style="border:1px solid #eee; border-radius:8px; padding:12px; margin-bottom:20px;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">Payment information</p>
+      <p style="font-size:13px; color:#555;"><strong>Client Data</strong></p>
+      <p style="font-size:13px; color:#555;">Holding institution: Itau Unibanco</p>
+    </div>
+
+    <div style="font-size:13px; line-height:2; margin-bottom:16px;">
+      <p><strong>Account:</strong> 04372-4</p>
+      <p><strong>CPF:</strong> ***.831.216-**</p>
+    </div>
+
+    <div style="border:1px solid #eee; border-radius:8px; padding:12px; margin-bottom:16px;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">Other Information</p>
+      <p style="font-size:13px; color:#555;"><strong>Transfer type:</strong> Pix Open Finance</p>
+      <p style="font-size:13px; color:#555;"><strong>Authorization description:</strong> Not informed</p>
+      <p style="font-size:13px; color:#555;"><strong>Authorization start:</strong> Jun 11, 26</p>
+    </div>
+
+    <p style="font-size:13px; color:#555; margin-bottom:12px;">After confirming, you are authorizing the other institution to transfer amounts from your Itau account.</p>
+
+    <div class="info-box">
+      <p>Information about pre-approved credit limit usage may apply depending on your account configuration.</p>
+    </div>
+
+    <button class="btn btn-orange" onclick="goTo(15)" style="margin-top:16px; margin-bottom:10px;">Confirm authorization</button>
+    <button class="btn" style="background:transparent; border:2px solid #003366; color:#003366; font-weight:600; border-radius:8px;">Cancel</button>
+  </div>
+</div>
+
+<!-- SCREEN 15 (old 21) -->
+<div class="screen" id="screen15" data-progress="65">
+  <div class="screen-content" style="padding-top:70px; text-align:center; background:#fff;">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(14)">&larr;</span>
+      <span></span>
+      <span style="font-size:20px; cursor:pointer; color:#EC7000;">?</span>
+    </div>
+
+    <h2 style="font-size:18px; margin:20px 0 24px;">For security, we need to confirm your identity</h2>
+
+    <div style="width:140px; height:140px; background:#f8f8f8; border-radius:50%; margin:0 auto 24px; display:flex; align-items:center; justify-content:center; border:3px dashed #ddd;">
+      <span style="font-size:50px;">&#128247;</span>
+    </div>
+
+    <p style="font-size:14px; color:#555; margin-bottom:8px;">Only the registered CPF holder should take the photo</p>
+    <p style="font-size:13px; color:#888; margin-bottom:30px;">The images are used for validation and not for profile photo</p>
+
+    <button class="btn btn-orange" onclick="goTo(16)">Continue &gt;</button>
+
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:20px; color:#666; font-size:13px;">
+      <span>Voice assistant</span>
+      <div style="width:40px; height:22px; background:#ccc; border-radius:11px; position:relative;">
+        <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:2px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 16 (old 22) -->
+<div class="screen" id="screen16" data-progress="70">
+  <div style="height:100%; background:#1B1464; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 20px; cursor:pointer;" onclick="goTo(18)">
+    <p style="color:rgba(255,255,255,0.6); font-size:13px; margin-bottom:30px;">Step 2 of 2</p>
+
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:30px;">
+      <div style="width:56px; height:56px; border-radius:12px; background:#EC7000; display:flex; align-items:center; justify-content:center;">
+        <span style="color:#fff; font-weight:700; font-size:14px; font-style:italic;">itau</span>
+      </div>
+      <span style="color:rgba(255,255,255,0.4); font-size:22px; letter-spacing:4px;">&gt;&gt;&gt;</span>
+      <div style="width:56px; height:56px; border-radius:12px; background:#820AD1; display:flex; align-items:center; justify-content:center;">
+        <span style="color:#fff; font-weight:700; font-size:16px;">Nu</span>
+      </div>
+    </div>
+
+    <p style="color:#fff; font-size:16px; font-weight:600; margin-bottom:12px;">Please wait, you are returning to Nubank</p>
+
+    <div style="display:flex; align-items:center; gap:8px; color:rgba(255,255,255,0.5); font-size:13px; margin-top:16px;">
+      <span>&#128274;</span>
+      <span>Open Finance Security</span>
+    </div>
+
+    <p class="tappable" onclick="event.stopPropagation(); goTo(17);" style="color:rgba(255,255,255,0.4); font-size:12px; margin-top:30px; padding:8px; border-radius:8px;">View authorization summary &rsaquo;</p>
+  </div>
+</div>
+
+<!-- SCREEN 17 (merged old 23+24) -->
+<div class="screen" id="screen17" data-progress="70">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="close-btn" onclick="goTo(16)">&times;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:20px;">Authorization summary</h2>
+
+    <p class="section-title">Holder</p>
+    <p style="font-weight:600;">Jose Ferreira Junior</p>
+    <p style="font-size:13px; color:#666; margin-bottom:4px;">CPF: ***.831.216-**</p>
+    <p style="font-size:13px; color:#666; margin-bottom:16px;">Institution: Itau</p>
+
+    <div style="font-size:13px; line-height:2.2; border-top:1px solid #eee; padding-top:12px;">
+      <p><strong>Authorization ID:</strong></p>
+      <p style="color:#666; word-break:break-all; margin-bottom:8px;">a6c1f42b-0a07-3f0e-9f4d-36b61f4f5a77</p>
+      <p><strong>Authorized transactions:</strong> Pix</p>
+      <p><strong>Start:</strong> 11 JUN. 2026 - 18:14:11</p>
+      <p><strong>Expires:</strong> 09 SET. 2026 - 18:14:09</p>
+    </div>
+
+    <div class="list-item tappable" style="margin-top:16px; border:1px solid #eee; border-radius:10px;">
+      <span style="flex:1; font-weight:600;">Established limit</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div class="info-box" style="margin-top:20px;">
+      <p style="font-weight:600; margin-bottom:8px;">Important notices</p>
+      <p style="margin-bottom:4px;">&#8226; Transfer amounts depend on available balance</p>
+      <p style="margin-bottom:4px;">&#8226; You can manage or cancel this authorization in the management area</p>
+      <p>&#8226; Pre-approved limits may be used if balance is insufficient</p>
+    </div>
+
+    <button class="btn btn-gray" style="margin-top:20px;">Access management area</button>
+  </div>
+</div>
+
+<!-- SCREEN 18 (old 25) -->
+<div class="screen" id="screen18" data-progress="75">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(16)">&larr;</span>
+      <span></span>
+    </div>
+    <h2 style="font-size:20px; margin-bottom:8px;">My authorizations</h2>
+    <p style="font-size:14px; color:#555; margin-bottom:20px;">Financial transfers from one bank to another without needing to be redirected between apps.</p>
+
+    <div class="tab-bar">
+      <div class="tab active">Initiating</div>
+      <div class="tab">Receiving</div>
+    </div>
+
+    <p style="font-size:13px; color:#666; margin-bottom:12px;">Where Nubank can move balance:</p>
+
+    <div class="list-item tappable" onclick="goTo(20)" style="border:1px solid #eee; border-radius:10px;">
+      <div class="icon-circle" style="background:#EC7000; color:#fff; width:36px; height:36px; font-size:11px;">It</div>
+      <div class="text">
+        <p style="font-weight:600;">Itau</p>
+      </div>
+      <span class="badge badge-green" style="margin-right:8px;">Active</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 19 (old 26) -->
+<div class="screen" id="screen19" data-progress="0">
+  <div class="nu-header" style="padding-bottom:24px;">
+    <p style="font-size:22px; font-weight:700; margin-bottom:4px;">Jose</p>
+    <p style="font-size:13px; opacity:0.8;">Branch 0001 &bull; Account 8211297-2</p>
+  </div>
+  <div style="padding:20px;">
+    <div style="background:#1a1a1a; border-radius:12px; padding:16px; margin-bottom:16px;">
+      <p style="font-weight:600; font-size:14px; color:#fff;">Ultravioleta Mastercard&reg; Black</p>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 0; margin-bottom:12px;">
+      <span style="font-size:13px; color:#666;">NuScore:</span>
+      <span style="font-weight:700; font-size:18px; color:#22c55e;">810</span>
+      <span style="font-size:12px; color:#22c55e;">&#8226; High</span>
+    </div>
+
+    <p style="font-size:12px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Other accounts</p>
+
+    <div class="list-item tappable" onclick="goTo(20)" style="border:1px solid #eee; border-radius:12px; margin-bottom:12px;">
+      <span style="font-size:18px;">&#127760;</span>
+      <span style="font-weight:600; flex:1;">Open Finance</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div class="list-item" style="border:1px solid #eee; border-radius:12px;">
+      <span style="font-size:18px;">&#128682;</span>
+      <span style="color:#e11d48; flex:1;">Log out</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 20 (old 27 + new manage connections section) -->
+<div class="screen" id="screen20" data-progress="100">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(18)">&larr;</span>
+      <span></span>
+      <span style="font-size:20px; cursor:pointer;">&#9881;</span>
+    </div>
+
+    <h2 style="font-size:24px; font-weight:700; margin-bottom:20px;">Open Finance Management</h2>
+
+    <button class="btn btn-purple" style="margin-bottom:20px; font-size:16px; padding:18px;">+ Connect Account</button>
+
+    <div style="border:1px solid #e8e8e8; border-radius:16px; padding:16px; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:40px; height:40px; border-radius:50%; background:#EC7000; display:flex; align-items:center; justify-content:center;">
+          <span style="color:#fff; font-weight:700; font-size:11px; font-style:italic;">itau</span>
+        </div>
+        <span style="font-weight:700; font-size:16px; flex:1;">Itau</span>
+      </div>
+      <p style="font-size:12px; color:#888; margin-bottom:8px;">Connections</p>
+      <div style="display:flex; gap:8px;">
+        <span style="background:#e6f9e6; color:#0a8a0a; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">Data Active</span>
+        <span style="background:#e6f9e6; color:#0a8a0a; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">Payments Active</span>
+      </div>
+    </div>
+
+    <p style="font-size:16px; font-weight:700; margin-bottom:12px;">Financial overview</p>
+    <div style="display:flex; gap:10px; margin-bottom:24px;">
+      <div style="flex:1; background:#f8f5fc; border-radius:12px; padding:14px;">
+        <div style="width:28px; height:28px; border-radius:50%; background:#EC7000; display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+          <span style="color:#fff; font-weight:700; font-size:8px; font-style:italic;">itau</span>
+        </div>
+        <p style="font-size:18px; font-weight:700; color:#1a1a1a;">R$ 215,048.63</p>
+        <p style="font-size:12px; color:#666;">Balance in accounts</p>
+      </div>
+      <div style="flex:1; background:#f8f5fc; border-radius:12px; padding:14px;">
+        <div style="width:28px; height:28px; border-radius:50%; background:#820AD1; display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+          <span style="color:#fff; font-size:14px;">&#8644;</span>
+        </div>
+        <p style="font-size:18px; font-weight:700; color:#1a1a1a;">R$ 0.00</p>
+        <p style="font-size:12px; color:#666;">Total in savings</p>
+      </div>
+    </div>
+
+    <p style="font-size:16px; font-weight:700; margin-bottom:12px;">What are the benefits?</p>
+    <div style="display:flex; gap:10px; margin-bottom:24px;">
+      <div style="flex:1; background:#f3e8ff; border-radius:12px; padding:16px;">
+        <p style="font-size:13px; font-weight:600; color:#333;">Improve your loan offer</p>
+      </div>
+      <div style="flex:1; background:#f3e8ff; border-radius:12px; padding:16px;">
+        <p style="font-size:13px; font-weight:600; color:#333;">Save time with your finances</p>
+      </div>
+    </div>
+
+    <p style="font-size:16px; font-weight:700; margin-bottom:12px;">Manage connections</p>
+
+    <div class="list-item tappable" style="border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
+      <span style="font-size:18px;">&#8644;</span>
+      <span style="flex:1; font-weight:600;">Data sent and received</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div class="list-item tappable" style="border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
+      <span style="font-size:18px;">&#128176;</span>
+      <span style="flex:1; font-weight:600;">Banks authorized to move balance</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div class="list-item tappable" style="border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
+      <span style="font-size:18px;">&#128241;</span>
+      <span style="flex:1; font-weight:600;">Pay by proximity and biometrics</span>
+      <span class="chevron-right">&rsaquo;</span>
+    </div>
+
+    <div style="margin-top:24px; padding:16px; background:#f8f8f8; border-radius:12px;">
+      <p style="font-weight:700; font-size:15px; margin-bottom:8px;">Have questions?</p>
+      <p class="purple-link" style="font-size:14px;">Learn all about Open Finance and its benefits</p>
+    </div>
+  </div>
+</div>
+
+
+</div>
+</div>
+
+<script>
+let currentScreen = 1;
+
+function goTo(screenNum) {
+  const current = document.getElementById('screen' + currentScreen);
+  const target = document.getElementById('screen' + screenNum);
+
+  if (!target || screenNum === currentScreen) return;
+
+  // Determine direction
+  const goingForward = screenNum > currentScreen;
+
+  current.style.transform = goingForward ? 'translateX(-20px)' : 'translateX(20px)';
+  current.style.opacity = '0';
+  current.classList.remove('active');
+
+  target.style.transform = goingForward ? 'translateX(20px)' : 'translateX(-20px)';
+  target.style.opacity = '0';
+
+  // Force reflow
+  void target.offsetWidth;
+
+  target.classList.add('active');
+  target.style.transform = 'translateX(0)';
+  target.style.opacity = '1';
+
+  // Reset scroll position
+  target.scrollTop = 0;
+
+  currentScreen = screenNum;
+  updateProgress();
+  updateStatusBar();
+}
+
+function updateProgress() {
+  const screen = document.getElementById('screen' + currentScreen);
+  const progress = screen.getAttribute('data-progress') || 0;
+  document.getElementById('progressFill').style.width = progress + '%';
+  document.getElementById('fixedBack').style.display = currentScreen > 1 ? 'block' : 'none';
+}
+
+function updateStatusBar() {
+  const statusBar = document.getElementById('statusBar');
+  // Dark backgrounds need white text
+  const darkScreens = [6, 7, 16, 19];
+  if (darkScreens.includes(currentScreen)) {
+    statusBar.classList.remove('dark');
+  } else {
+    statusBar.classList.add('dark');
+  }
+}
+
+function showModal() {
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function hideModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+// Initialize
+updateProgress();
+updateStatusBar();
+</script>
+</body>
+</html>
