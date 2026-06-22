@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuScore Credit Score Journey</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  background: #000;
+  border-radius: 55px;
+  padding: 12px;
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.5), inset 0 0 2px rgba(255,255,255,0.1);
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+}
+
+.notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 34px;
+  background: #000;
+  border-radius: 0 0 20px 20px;
+  z-index: 1000;
+}
+
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px 0;
+  z-index: 999;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-bar .time { color: #fff; }
+.status-bar .icons { color: #fff; display: flex; gap: 6px; font-size: 12px; }
+.status-bar.dark .time, .status-bar.dark .icons { color: #000; }
+
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: translateX(20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+
+.screen.slide-left {
+  transform: translateX(-20px);
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+.screen-content {
+  padding: 70px 20px 40px;
+  min-height: 100%;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.back-btn, .close-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s;
+  font-size: 20px;
+}
+
+.back-btn:hover, .close-btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  text-align: center;
+}
+
+.btn:hover { opacity: 0.9; }
+.btn:active { transform: scale(0.98); }
+
+.btn-purple {
+  background: #820AD1;
+  color: #fff;
+}
+
+.btn-red {
+  background: #E02D5A;
+  color: #fff;
+}
+
+.tappable {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+
+.tappable:hover {
+  background: rgba(130, 10, 209, 0.04);
+}
+
+.card {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 12px;
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+}
+
+.list-item:hover {
+  background: #f8f5fc;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 1001;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-sheet {
+  background: #fff;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px 40px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 80%;
+  overflow-y: auto;
+}
+
+.modal-overlay.active .modal-sheet {
+  transform: translateY(0);
+}
+
+/* Score gauge */
+.gauge-container {
+  position: relative;
+  width: 200px;
+  height: 120px;
+  margin: 20px auto;
+}
+
+.gauge-svg {
+  width: 200px;
+  height: 120px;
+}
+
+.gauge-score {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -10%);
+  text-align: center;
+}
+
+.gauge-score .number {
+  font-size: 48px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.gauge-score .total {
+  font-size: 14px;
+  color: #999;
+}
+
+/* Badge styles */
+.badge-attention {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-optimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #DCFCE7;
+  color: #16A34A;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-high {
+  background: #820AD1;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Score tag */
+.score-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #DCFCE7;
+  color: #16A34A;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+/* Evolution bars */
+.evo-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.evo-bar .month {
+  width: 32px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.evo-bar .bar {
+  height: 28px;
+  background: #16A34A;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 40px;
+}
+
+/* Behavior item */
+.behavior-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.behavior-item:hover {
+  background: #f8f5fc;
+}
+
+.behavior-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.behavior-icon.attention {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.behavior-icon.optimal {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.behavior-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  font-size: 11px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.meta-tag.source {
+  color: #820AD1;
+  font-weight: 500;
+}
+
+/* Accordion */
+.accordion-item {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 0;
+}
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 12px;
+}
+
+.accordion-header .icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.accordion-header .text {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.accordion-chevron {
+  color: #999;
+  font-size: 18px;
+  transition: transform 0.2s;
+}
+
+/* Info card */
+.info-card {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+/* Score range */
+.score-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.score-range .label {
+  font-size: 14px;
+  color: #333;
+}
+
+.score-range .tag {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Profile styles */
+.profile-light {
+  background: #fff;
+  padding: 70px 20px 20px;
+  color: #1a1a1a;
+}
+
+.profile-card {
+  background: #f8f8f8;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 0;
+  gap: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.profile-menu-item .icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.profile-menu-item .text {
+  flex: 1;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.profile-menu-item .arrow {
+  color: #999;
+}
+
+/* NuScore badge on profile */
+.nuscore-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(130, 10, 209, 0.15);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a855f7;
+}
+
+/* Section divider */
+.section-label {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 20px 0 8px;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="phone-frame">
+<div class="phone-screen" id="app">
+<div class="notch"></div>
+<div class="status-bar dark" id="statusBar">
+  <span class="time">9:41</span>
+  <span class="icons">
+    <span>&#9679;&#9679;&#9679;&#9679;</span>
+    <span>WiFi</span>
+    <span>&#128267;</span>
+  </span>
+</div>
+
+<!-- SCREEN 1: User Profile (Entry Point 1) -->
+<div class="screen active" id="screen1" data-statusbar="dark">
+  <div class="profile-light" style="min-height:100%;">
+    <div class="header-nav" style="margin-bottom:12px;">
+      <span class="close-btn" style="color:#333;">&times;</span>
+      <div style="display:flex; gap:12px;">
+        <span style="color:#666; font-size:18px;">&#9881;</span>
+        <span style="color:#666; font-size:18px;">&#128276;</span>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+      <div style="width:48px; height:48px; background:#820AD1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; font-weight:700;">J</div>
+      <div>
+        <p style="font-weight:700; font-size:17px; color:#1a1a1a;">Jose</p>
+        <p style="font-size:13px; color:#666;">Branch 0001 &middot; Account 8210977-2 <span style="color:#820AD1;">More</span></p>
+      </div>
+    </div>
+
+    <div class="profile-card" style="background: linear-gradient(135deg, #2d1b69, #1a1145); border: 1px solid rgba(130,10,209,0.3);">
+      <div style="flex:1;">
+        <p style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px;">Ultravioleta Mastercard&#174; Black</p>
+        <p style="font-size:13px; color:rgba(255,255,255,0.8);">Your best choice for travel.</p>
+      </div>
+    </div>
+
+    <div class="profile-card tappable" onclick="goTo(2)" style="background:rgba(130,10,209,0.06); border:1px solid rgba(130,10,209,0.2);">
+      <div style="font-size:20px;">&#128200;</div>
+      <div style="flex:1;">
+        <p style="font-weight:600; font-size:15px; color:#1a1a1a;">NuScore</p>
+      </div>
+      <div class="nuscore-badge">810 <span style="font-size:11px; opacity:0.7;">Pts</span></div>
+    </div>
+
+    <p class="section-label">Other accounts</p>
+
+    <div class="profile-menu-item">
+      <div class="icon">+</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; color:#1a1a1a; font-weight:500;">Open Business Account</p>
+        <p style="font-size:12px; color:#666;">Create a free company account for your business</p>
+      </div>
+    </div>
+
+    <div class="profile-menu-item">
+      <div class="icon">&#128106;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; color:#1a1a1a; font-weight:500;">Create Account for Kids</p>
+        <p style="font-size:12px; color:#666;">Debit, Account, and Savings for under 18</p>
+      </div>
+    </div>
+
+    <div class="profile-menu-item">
+      <div class="icon">&#127974;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; color:#1a1a1a; font-weight:500;">Open Finance</p>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; text-align:center;">
+      <p style="font-size:14px; color:#666;">&#8594; Exit the app</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: Score Dashboard -->
+<div class="screen" id="screen2" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(1)">&larr;</span>
+      <span style="font-weight:600;">NuScore</span>
+      <span class="back-btn" onclick="openModal('howCalculated')" style="font-size:22px;">&#8943;</span>
+    </div>
+
+    <div class="gauge-container">
+      <svg class="gauge-svg" viewBox="0 0 200 120">
+        <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#eee" stroke-width="12" stroke-linecap="round"/>
+        <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#16A34A" stroke-width="12" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="48"/>
+      </svg>
+      <div class="gauge-score">
+        <div class="number">810</div>
+        <div class="total">of 1000</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <span class="score-tag">High score &rarr;</span>
+      <p style="font-size:13px; color:#999; margin-top:8px;">Monthly updates &#9432;</p>
+    </div>
+
+    <div style="margin-top:24px;">
+      <h3 style="font-size:16px; font-weight:700; margin-bottom:12px;">What's impacting my NuScore?</h3>
+
+      <div class="tappable" onclick="goTo(4)" style="display:flex; align-items:center; justify-content:space-between; padding:12px 8px; border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge-attention">&#9888; Needs attention</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:14px; color:#666;">2 items</span>
+          <span style="color:#999;">&rsaquo;</span>
+        </div>
+      </div>
+
+      <div class="tappable" onclick="goTo(4)" style="display:flex; align-items:center; justify-content:space-between; padding:12px 8px; border-bottom:1px solid #f0f0f0;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge-optimal">&#10003; Optimal</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:14px; color:#666;">6 items</span>
+          <span style="color:#999;">&rsaquo;</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="tappable" onclick="goTo(4)" style="display:flex; align-items:center; justify-content:space-between; padding:14px 8px; background:#f8f8f8; border-radius:12px;">
+        <div>
+          <p style="font-weight:600; font-size:15px;">Month-over-month evolution</p>
+          <p style="font-size:13px; color:#666;">No change last month</p>
+        </div>
+        <span style="font-size:18px; color:#999;">&rsaquo;</span>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <p style="font-size:13px; color:#999; margin-bottom:8px;">CPF Monitoring</p>
+      <div class="tappable" onclick="goTo(8)" style="display:flex; align-items:center; gap:12px; padding:12px; background:#f8f8f8; border-radius:12px;">
+        <div style="width:36px; height:36px; background:#DCFCE7; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#16A34A; font-size:16px;">&#10003;</div>
+        <div style="flex:1;">
+          <p style="font-size:14px; font-weight:500;">No new debts found</p>
+          <p style="font-size:12px; color:#666;">External debts</p>
+        </div>
+        <div style="width:28px; height:28px; background:#1a6b4a; border-radius:6px; display:flex; align-items:center; justify-content:center;">
+          <span style="color:#fff; font-size:10px; font-weight:700;">AC</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="tappable" onclick="goTo(10)" style="display:flex; align-items:center; justify-content:space-between; padding:14px 8px; background:#f8f8f8; border-radius:12px;">
+        <div>
+          <p style="font-weight:600; font-size:14px;">Other things that influence your NuScore</p>
+          <p style="font-size:12px; color:#666;">Your financial behavior inside and outside Nubank influences your NuScore.</p>
+        </div>
+        <span class="btn-red" style="padding:8px 14px; border-radius:20px; font-size:12px; display:inline-block; white-space:nowrap;">Learn more</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- How Calculated Modal -->
+  <div class="modal-overlay" id="howCalculated" onclick="closeModal('howCalculated')">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:18px; font-weight:700;">How is NuScore calculated?</h3>
+        <span onclick="closeModal('howCalculated')" style="cursor:pointer; font-size:22px; color:#999;">&times;</span>
+      </div>
+      <div style="margin-bottom:16px;">
+        <p style="font-weight:600; font-size:14px; margin-bottom:4px;">&#128200; Monthly analyses</p>
+        <p style="font-size:13px; color:#555;">The analysis is done on the 15th of each month.</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <p style="font-weight:600; font-size:14px; margin-bottom:4px;">&#128176; Financial behaviors</p>
+        <p style="font-size:13px; color:#555;">We look at how you pay your bills, manage your spending, and whether you balance income vs. expenses.</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <p style="font-weight:600; font-size:14px; margin-bottom:4px;">&#127974; Finances inside and outside Nubank</p>
+        <p style="font-size:13px; color:#555;">We use Open Finance and Central Bank data for a complete view of your financial life.</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <p style="font-weight:600; font-size:14px; margin-bottom:4px;">&#127760; Reputation at other bureaus</p>
+        <p style="font-size:13px; color:#555;">We check your reputation at other credit bureaus.</p>
+      </div>
+
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid #eee;">
+        <p style="font-size:14px; font-weight:600; margin-bottom:8px;">A high NuScore reflects good financial health and can unlock better products from Nu.</p>
+        <div style="margin-top:12px;">
+          <div class="score-range">
+            <span class="label">Score 901 to 1000</span>
+            <span class="tag" style="background:#DCFCE7; color:#16A34A;">Excellent &#8593;</span>
+          </div>
+          <div class="score-range">
+            <span class="label">Score 801 to 900</span>
+            <span class="tag" style="background:#DCFCE7; color:#16A34A;">Very high &#8593;</span>
+          </div>
+          <div class="score-range">
+            <span class="label">Score 551 to 800</span>
+            <span class="tag" style="background:#FEF9C3; color:#A16207;">Regular &#8596;</span>
+          </div>
+          <div class="score-range">
+            <span class="label">Score 401 to 550</span>
+            <span class="tag" style="background:#FEE2E2; color:#DC2626;">Low &#8595;</span>
+          </div>
+          <div class="score-range">
+            <span class="label">Score 0 to 400</span>
+            <span class="tag" style="background:#FEE2E2; color:#DC2626;">Very low &#8595;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: How NuScore is Calculated (fullscreen, from 3 dots) -->
+<div class="screen" id="screen3" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span></span>
+      <span></span>
+      <span class="close-btn" onclick="goTo(2)">&times;</span>
+    </div>
+
+    <h2 style="font-size:22px; font-weight:700; margin-bottom:20px;">How is NuScore calculated?</h2>
+
+    <div style="margin-bottom:20px;">
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+        <span style="font-size:20px;">&#128200;</span>
+        <div>
+          <p style="font-weight:600; font-size:15px;">Monthly analyses</p>
+          <p style="font-size:13px; color:#555;">The analysis is done on the 15th of each month.</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+        <span style="font-size:20px;">&#128176;</span>
+        <div>
+          <p style="font-weight:600; font-size:15px;">Financial behaviors</p>
+          <p style="font-size:13px; color:#555;">We look at how you pay your bills and whether your spending is balanced against your income.</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+        <span style="font-size:20px;">&#127974;</span>
+        <div>
+          <p style="font-weight:600; font-size:15px;">Finances inside and outside Nubank</p>
+          <p style="font-size:13px; color:#555;">We use Open Finance and Central Bank data for a complete view of your financial life.</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+        <span style="font-size:20px;">&#127760;</span>
+        <div>
+          <p style="font-weight:600; font-size:15px;">Reputation at other bureaus</p>
+          <p style="font-size:13px; color:#555;">We check your reputation at other credit bureaus.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding-top:16px; border-top:1px solid #eee;">
+      <p style="font-size:14px; font-weight:600; margin-bottom:4px;">A high NuScore reflects good financial health and can unlock better Nu products for you.</p>
+      <p style="font-size:13px; color:#555; margin-bottom:16px;">Track your NuScore evolution and the behaviors you can still improve.</p>
+
+      <div class="score-range">
+        <span class="label">Score 901 to 1000</span>
+        <span class="tag" style="background:#DCFCE7; color:#16A34A;">Excellent &#8593;</span>
+      </div>
+      <div class="score-range">
+        <span class="label">Score 801 to 900</span>
+        <span class="tag" style="background:#DCFCE7; color:#16A34A;">Very high &#8593;</span>
+      </div>
+      <div class="score-range">
+        <span class="label">Score 551 to 800</span>
+        <span class="tag" style="background:#FEF9C3; color:#A16207;">Regular &#8596;</span>
+      </div>
+      <div class="score-range">
+        <span class="label">Score 401 to 550</span>
+        <span class="tag" style="background:#FEE2E2; color:#DC2626;">Low &#8595;</span>
+      </div>
+      <div class="score-range">
+        <span class="label">Score 0 to 400</span>
+        <span class="tag" style="background:#FEE2E2; color:#DC2626;">Very low &#8595;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: Score Breakdown + Evolution (merged 9+10) -->
+<div class="screen" id="screen4" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(2)">&larr;</span>
+      <span style="font-weight:600;">NuScore &middot; 810</span>
+      <span></span>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:16px;">What's impacting my NuScore?</h2>
+
+    <!-- Evolution chart -->
+    <div style="display:flex; gap:4px; margin-bottom:20px; align-items:flex-end;">
+      <div style="text-align:center;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600;">830</div>
+        <p style="font-size:10px; color:#666; margin-top:2px;">DEC</p>
+      </div>
+      <div style="text-align:center;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600;">830</div>
+        <p style="font-size:10px; color:#666; margin-top:2px;">JAN</p>
+      </div>
+      <div style="text-align:center;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600;">820</div>
+        <p style="font-size:10px; color:#666; margin-top:2px;">FEB</p>
+      </div>
+      <div style="text-align:center;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600;">820</div>
+        <p style="font-size:10px; color:#666; margin-top:2px;">MAR</p>
+      </div>
+      <div style="text-align:center;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600;">810</div>
+        <p style="font-size:10px; color:#666; margin-top:2px;">APR</p>
+      </div>
+      <div style="text-align:center; position:relative;">
+        <div style="background:#16A34A; border-radius:4px; padding:4px 8px; color:#fff; font-size:11px; font-weight:600; outline:2px solid #16A34A; outline-offset:2px;">810</div>
+        <p style="font-size:10px; color:#333; margin-top:2px; font-weight:600;">MAY</p>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+      <span style="font-size:14px; color:#333; font-weight:600;">May</span>
+      <span style="font-size:14px; color:#999;">&rsaquo;</span>
+    </div>
+
+    <!-- Behavior categories -->
+    <p style="font-size:13px; color:#666; margin-bottom:8px;">Your financial health</p>
+
+    <div class="behavior-item" onclick="goTo(5)">
+      <div class="behavior-icon optimal">&#10003;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; font-weight:500;">Payment history</p>
+        <div class="behavior-meta">
+          <span class="badge-optimal" style="font-size:11px; padding:2px 8px;">Optimal</span>
+        </div>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div class="behavior-item">
+      <div class="behavior-icon optimal">&#10003;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; font-weight:500;">Income vs. expenses</p>
+        <div class="behavior-meta">
+          <span class="badge-optimal" style="font-size:11px; padding:2px 8px;">Optimal</span>
+        </div>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div class="behavior-item" onclick="goTo(7)">
+      <div class="behavior-icon attention">&#9888;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; font-weight:500;">Money saved relative to income</p>
+        <div class="behavior-meta">
+          <span class="badge-attention" style="font-size:11px; padding:2px 8px;">Needs attention</span>
+        </div>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <p style="font-size:13px; color:#666; margin:16px 0 8px;">Relationship with Nu</p>
+
+    <div class="behavior-item" onclick="goTo(7)">
+      <div class="behavior-icon attention">&#9888;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; font-weight:500;">Credit card transactions at Nubank</p>
+        <div class="behavior-meta">
+          <span class="badge-attention" style="font-size:11px; padding:2px 8px;">Needs attention</span>
+        </div>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div class="behavior-item" onclick="goTo(5)">
+      <div class="behavior-icon optimal">&#10003;</div>
+      <div style="flex:1;">
+        <p style="font-size:14px; font-weight:500;">Credit score at other institutions</p>
+        <div class="behavior-meta">
+          <span class="badge-optimal" style="font-size:11px; padding:2px 8px;">Optimal</span>
+        </div>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div style="margin-top:20px; padding:16px; background:#f8f8f8; border-radius:12px;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:4px;">Other things that influence your NuScore</p>
+      <p style="font-size:13px; color:#555; margin-bottom:12px;">Your financial behavior inside and outside Nubank influences your NuScore.</p>
+      <span class="btn-red" onclick="goTo(10)" style="padding:10px 20px; border-radius:20px; font-size:13px; display:inline-block; cursor:pointer;">Learn more</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- SCREEN 5: Behavior Detail — Optimal (from screen 11 + 12 left) -->
+<div class="screen" id="screen5" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(4)">&larr;</span>
+      <span style="font-weight:600;">NuScore &middot; 810</span>
+      <span></span>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:8px;">Payment history at other institutions</h2>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+      <span class="badge-optimal">Optimal</span>
+      <span class="meta-tag">&#9650; High influence</span>
+      <span class="meta-tag source">Outside Nubank</span>
+    </div>
+
+    <div class="info-card">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">&#128522; How was your behavior</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">You have no late payments on credit cards, loans, or financing from other institutions in recent months.</p>
+    </div>
+
+    <div style="margin-top:20px; padding:16px; background:#f0fdf4; border-radius:12px; border-left:4px solid #16A34A;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">What ideal behavior looks like</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">Keeping all bills and payments up to date at other financial institutions shows fiscal responsibility and positively impacts your score.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 6: Behavior Detail — Optimal (second level, from tapping on screen 5 list) -->
+<div class="screen" id="screen6" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(5)">&larr;</span>
+      <span style="font-weight:600;">NuScore &middot; 810</span>
+      <span></span>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:8px;">Nubank bill payment history</h2>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+      <span class="badge-optimal">Optimal</span>
+      <span class="meta-tag">&#9650; High influence</span>
+      <span class="meta-tag source">At Nubank</span>
+    </div>
+
+    <div class="info-card">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">&#128522; How was your behavior</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">You consistently pay your Nubank credit card bill on time every month. Keep it up!</p>
+    </div>
+
+    <div style="margin-top:20px; padding:16px; background:#f0fdf4; border-radius:12px; border-left:4px solid #16A34A;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">What ideal behavior looks like</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">Paying your full bill before the due date each month demonstrates strong financial discipline and protects your score.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 7: Behavior Detail — Needs Attention (from screen 12 right) -->
+<div class="screen" id="screen7" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(4)">&larr;</span>
+      <span style="font-weight:600;">NuScore &middot; 810</span>
+      <span></span>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:8px;">Money saved relative to income</h2>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+      <span class="badge-attention">Needs attention</span>
+      <span class="meta-tag">&#9650; Medium influence</span>
+      <span class="meta-tag source">At Nubank</span>
+    </div>
+
+    <div class="info-card">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">&#128530; How was your behavior</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">You did not save any of your monthly income in Savings, fixed-income investments, or your account last month.</p>
+    </div>
+
+    <div style="margin-top:20px; padding:16px; background:#FEF2F2; border-radius:12px; border-left:4px solid #DC2626;">
+      <p style="font-weight:600; font-size:14px; margin-bottom:8px;">What ideal behavior looks like</p>
+      <p style="font-size:13px; color:#555; line-height:1.5;">It's important to save a good amount of money every month. We understand this as regular savings, which indicates you plan ahead and have a reserve for emergencies.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 8: CPF Monitoring Discovery -->
+<div class="screen" id="screen8" data-statusbar="dark">
+  <div class="screen-content" style="padding-top:70px;">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(2)">&larr;</span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+      <span style="font-size:20px; font-weight:700; color:#820AD1;">nu</span>
+      <span style="color:#999;">+</span>
+      <span style="font-size:14px; font-weight:600; color:#1a6b4a;">&#10003; acordocerto</span>
+    </div>
+
+    <h2 style="font-size:22px; font-weight:700; margin-bottom:8px;">Discover external debts in your name</h2>
+    <p style="font-size:14px; color:#555; margin-bottom:24px;">It's free and helps you organize your financial life.</p>
+
+    <div style="margin-bottom:16px; display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0;">
+      <span style="font-size:18px;">&#128269;</span>
+      <div>
+        <p style="font-weight:600; font-size:14px;">New debt alerts</p>
+        <p style="font-size:13px; color:#555;">We'll notify you if something appears on your CPF at Acordo Certo partners.</p>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div style="margin-bottom:16px; display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0;">
+      <span style="font-size:18px;">&#127381;</span>
+      <div>
+        <p style="font-weight:600; font-size:14px;">Special conditions to negotiate</p>
+        <p style="font-size:13px; color:#555;">Settle debts with exclusive conditions offered by partners.</p>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <div style="margin-bottom:30px; display:flex; align-items:flex-start; gap:12px; padding:12px 0;">
+      <span style="font-size:18px; color:#820AD1; font-weight:700;">nu</span>
+      <div>
+        <p style="font-weight:600; font-size:14px;">All in one place, for free</p>
+        <p style="font-size:13px; color:#555;">Check, negotiate, and resolve directly in the Nu app.</p>
+      </div>
+      <span style="color:#999;">&rsaquo;</span>
+    </div>
+
+    <button class="btn btn-red" onclick="goTo(9)" style="margin-bottom:12px;">Activate CPF Monitoring</button>
+
+    <p style="font-size:11px; color:#999; text-align:center; line-height:1.4;">By continuing, you agree that Acordo Certo may access your personal data according to the <span style="color:#820AD1; text-decoration:underline;">Privacy Policy</span> and <span style="color:#820AD1; text-decoration:underline;">Terms of Use</span> for CPF Monitoring.</p>
+  </div>
+</div>
+
+<!-- SCREEN 9: CPF Monitoring Success -->
+<div class="screen" id="screen9" data-statusbar="dark">
+  <div class="screen-content" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:100%;">
+    <div class="header-nav" style="position:absolute; top:70px; left:20px; right:20px;">
+      <span class="back-btn" onclick="goTo(2)">&larr;</span>
+      <span style="font-weight:600;">NuScore</span>
+      <span style="display:flex; gap:8px;">
+        <span style="color:#999; font-size:18px;">&#9432;</span>
+        <span style="color:#999; font-size:18px;">&#9881;</span>
+      </span>
+    </div>
+
+    <div style="margin-top:40px;">
+      <p style="font-size:14px; color:#666; margin-bottom:16px;">Negotiations via</p>
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:30px;">
+        <span style="font-size:24px; color:#1a6b4a; font-weight:700;">&#10003;</span>
+        <span style="font-size:20px; font-weight:700; color:#1a6b4a;">acordo certo</span>
+      </div>
+
+      <div style="background:#f0fdf4; border-radius:12px; padding:16px; display:flex; align-items:center; gap:12px; text-align:left;">
+        <div style="flex:1;">
+          <p style="font-size:14px; color:#333; line-height:1.4;">Relax! We found no external debts on the Acordo Certo platform. <span style="color:#820AD1; text-decoration:underline; cursor:pointer;">Learn more</span></p>
+        </div>
+        <div style="width:32px; height:32px; background:#16A34A; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px;">&#10003;</div>
+      </div>
+    </div>
+
+    <div style="position:absolute; bottom:40px; left:0; right:0; text-align:center;">
+      <p style="color:#820AD1; font-size:14px; cursor:pointer;">&#10084; Rate your experience</p>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 10: Other Factors (merged 13+14) -->
+<div class="screen" id="screen10" data-statusbar="dark">
+  <div class="screen-content">
+    <div class="header-nav">
+      <span class="back-btn" onclick="goTo(4)">&larr;</span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">Other things that influence your NuScore</h2>
+
+    <p style="font-size:13px; color:#666; font-weight:600; margin-bottom:8px;">Credit card</p>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128179;</span>
+        <span class="text">Time with your card</span>
+        <span style="font-size:12px; color:#999; background:#f0f0f0; padding:2px 8px; border-radius:10px; margin-right:8px;">10 year(s) and 1 month(s)</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#127974;</span>
+        <span class="text">Use Nubank as main account</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128200;</span>
+        <span class="text">Unlock more limit with Nu Limite Garantido</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128722;</span>
+        <span class="text">Be careful with purchases in many installments</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128179;</span>
+        <span class="text">Avoid having too many credit cards</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <p style="font-size:13px; color:#666; font-weight:600; margin:20px 0 8px;">Account and income</p>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128181;</span>
+        <span class="text">Set up salary portability</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#128203;</span>
+        <span class="text">Keep income updated</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon" style="position:relative;">&#128279;<span style="position:absolute; top:-2px; right:-4px; background:#16A34A; color:#fff; font-size:8px; padding:1px 3px; border-radius:3px; font-weight:700;">OK</span></span>
+        <span class="text">Bring data via Open Finance</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+
+    <p style="font-size:13px; color:#666; font-weight:600; margin:20px 0 8px;">Others</p>
+
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span class="icon">&#10003;</span>
+        <span class="text">Invest through Nubank</span>
+        <span class="accordion-chevron">&#8964;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+let currentScreen = 1;
+const totalScreens = 10;
+
+function goTo(n) {
+  if (n < 1 || n > totalScreens) return;
+  const current = document.getElementById('screen' + currentScreen);
+  const next = document.getElementById('screen' + n);
+
+  if (n > currentScreen) {
+    current.classList.add('slide-left');
+  }
+
+  current.classList.remove('active');
+  setTimeout(() => {
+    current.classList.remove('slide-left');
+  }, 300);
+
+  next.classList.add('active');
+  currentScreen = n;
+
+  const statusBar = document.getElementById('statusBar');
+  const statusType = next.getAttribute('data-statusbar');
+  if (statusType === 'light') {
+    statusBar.classList.remove('dark');
+  } else {
+    statusBar.classList.add('dark');
+  }
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+</script>
+</body>
+</html>
